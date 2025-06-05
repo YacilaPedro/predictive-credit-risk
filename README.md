@@ -57,9 +57,9 @@ Desarrollar un modelo de clasificación que permita predecir la morosidad de cli
 ```
 📦 morosidad-machine-learning
 │
-├── analisis_morosidad.R              # Script en R con todo el código comentado
-├── analisis_morosidad.Rmd            # Archivo RMarkdown editable
-├── analisis_morosidad.html           # Informe final en HTML
+├── Proyecto-Análisis-Predictivo-de-Morosidad-con-Modelos-de-Machine-Learning.R              # Script en R con todo el código comentado
+├── Proyecto-Análisis-Predictivo-de-Morosidad-con-Modelos-de-Machine-Learning.Rmd            # Archivo RMarkdown editable
+├── Proyecto-Análisis-Predictivo-de-Morosidad-con-Modelos-de-Machine-Learningad.html           # Informe final en HTML
 ├── UCI_Credit_Card.csv               # Dataset fuente (no incluido por tamaño)
 └── README.md                         # Este archivo
 ```
