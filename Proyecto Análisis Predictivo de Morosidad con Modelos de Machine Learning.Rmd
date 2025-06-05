@@ -1,0 +1,180 @@
+---
+title: "Proyecto: Análisis Predictivo de Morosidad con Modelos de Machine Learning"
+author: "Pedro Yacila"
+date: "2025-06-05"
+output: 
+  html_document:
+    theme: flatly        # Otros: cosmo, cerulean, readable, spacelab
+    highlight: tango     # Coloreado de código
+    toc: true            # Tabla de contenido
+    toc_float: true      # TOC flotante a la izquierda
+    number_sections: true
+    code_folding: hide   # Permite ocultar/mostrar código
+    df_print: paged      # Para mostrar dataframes con paginación
+---
+
+# Introduccion 
+
+Este proyecto busca implementar un modelo de machine learning para predecir morosidad crediticia, utilizando el dataset UCI Credit Card Default. Mediante algoritmos como Regresión Logística y XGBoost, se analizarán variables financieras y comportamentales para identificar patrones de riesgo. El objetivo es optimizar la evaluación crediticia, apoyando decisiones más precisas en la gestión de riesgos financieros
+
+# Objetivo del Proyecto
+
+Desarrollar un modelo de clasificación que permita predecir la morosidad de clientes a partir de sus características crediticias y comportamentales, utilizando técnicas de aprendizaje supervisado.
+
+# Objetivos Específicos
+
+Realizar un análisis exploratorio y limpieza del dataset UCI_Credit_Card.csv.
+
+Aplicar técnicas de preprocesamiento como la transformación de variables categóricas y escalamiento.
+
+Entrenar y evaluar un modelo de Regresión Logística como línea base.
+
+Implementar un modelo de XGBoost para mejorar la predicción ante el desbalance de clases.
+
+Comparar el desempeño de los modelos mediante métricas como Accuracy, Sensibilidad, Especificidad y AUC.
+
+Elaborar una conclusión final con recomendaciones de mejora y uso del modelo en contextos reales.
+
+
+# Manipulacion de Datos
+
+## 1. Cargar Librerías necesarias
+
+```{r}
+library(tidyverse)      # Manipulación de datos
+library(caret)          # Preprocesamiento y evaluación de modelos
+library(corrplot)       # Visualización de matrices de correlación
+library(randomForest)   # Para otros modelos opcionales
+library(xgboost)        # Implementación del modelo XGBoost
+library(pROC)           # Curvas ROC y análisis de desempeño
+```
+
+## 2. Cargar y preparar los datos
+
+```{r}
+df <- read.csv("UCI_Credit_Card.csv")  # Cargar dataset original
+
+# Convertimos la variable objetivo a factor
+df$default <- as.factor(df$default.payment.next.month)
+
+# Eliminamos ID y la variable duplicada de salida
+df <- df %>% select(-ID, -default.payment.next.month)
+
+```
+
+Conclusión: Se eliminan columnas irrelevantes para el análisis y se define la variable de interés (morosidad) como factor.
+
+## 3. División en conjunto de entrenamiento y prueba
+
+```{r}
+
+set.seed(123)
+train_index <- createDataPartition(df$default, p = 0.8, list = FALSE)
+train <- df[train_index, ]
+test <- df[-train_index, ]
+
+```
+
+Conclusión: El dataset se divide en 80% para entrenamiento y 20% para prueba, asegurando representatividad de la variable objetivo.
+
+## 4. Escalamiento de variables numéricas
+
+```{r}
+preProc <- preProcess(train %>% select(-default), method = c("center", "scale"))
+train_scaled <- predict(preProc, train)
+test_scaled <- predict(preProc, test)
+
+```
+
+Conclusión: Se estandarizan las variables numéricas, fundamental para algoritmos sensibles a la escala como Regresión Logística y XGBoost.
+
+
+## 5. Modelo de Regresión Logística}
+
+```{r}
+
+model_log <- glm(default ~ ., data = train_scaled, family = "binomial")
+
+
+```
+
+### Realizamos predicciones con el modelo
+
+```{r}
+pred_log <- predict(model_log, newdata = test_scaled, type = "response")
+pred_log_class <- ifelse(pred_log > 0.5, "1", "0")
+
+```
+
+
+### Evaluamos con matriz de confusión
+
+
+```{r}
+# Evaluamos con matriz de confusión
+conf_matrix <- confusionMatrix(factor(pred_log_class), test_scaled$default)
+print(conf_matrix)
+
+```
+
+
+Conclusión del modelo:
+ - Accuracy: ~81.14%
+ - Sensibilidad (clase 0): muy alta (~97%), indicando buena predicción de no morosos.
+ - Especificidad (clase 1): baja (~25%), indicando pobre detección de morosos.
+ - Balanced Accuracy: ~60.94%
+ 
+
+## 6. Curva ROC para Regresión Logística
+
+```{r}
+
+roc_log <- roc(test_scaled$default, as.numeric(pred_log))
+plot(roc_log, main = "Curva ROC - Regresión Logística")
+
+```
+Conclusión del gráfico:
+ - La curva ROC se acerca al área superior izquierda, pero no alcanza el ideal.
+ - Indica que el modelo tiene poder predictivo moderado.
+ - El área bajo la curva (AUC) debería complementarse para evaluar rendimiento.
+ 
+## 7. Modelo XGBoost
+
+```{r}
+train_matrix <- xgb.DMatrix(data = as.matrix(train_scaled %>% select(-default)), label = as.numeric(train_scaled$default) - 1)
+test_matrix <- xgb.DMatrix(data = as.matrix(test_scaled %>% select(-default)), label = as.numeric(test_scaled$default) - 1)
+
+params <- list(objective = "binary:logistic", eval_metric = "auc")
+model_xgb <- xgb.train(params = params, data = train_matrix, nrounds = 100)
+
+model_xgb
+
+```
+
+
+
+Conclusión esperada:
+ - XGBoost maneja mejor el desbalance de clases que la regresión logística.
+ - Mejora el AUC y la detección de morosos.
+ - Permite ajustes finos en umbrales y penalizaciones.
+
+## Conclusión General del Estudio
+
+```{r}
+cat("
+Conclusión General:
+
+Este estudio implementa un análisis predictivo para estimar la probabilidad de morosidad de clientes usando modelos supervisados.
+
+Se trabajó con el dataset UCI_Credit_Card.csv, aplicando limpieza, escalamiento y modelamiento con Regresión Logística y XGBoost. La regresión mostró buen desempeño en identificar clientes no morosos, pero bajo rendimiento para morosos debido al desbalance de clases.
+
+XGBoost se plantea como alternativa más robusta, capaz de mejorar la sensibilidad para morosos. Se sugiere en futuros trabajos aplicar técnicas de balanceo de clases (como SMOTE), ajustar umbrales de decisión y explorar modelos adicionales como Random Forest o LightGBM.
+
+Este análisis puede ser una herramienta valiosa para entidades financieras al anticipar riesgos de crédito y optimizar sus políticas de otorgamiento.
+")
+
+```
+
+
+
+
